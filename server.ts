@@ -19,7 +19,7 @@ const FALLBACK_MODELS = [
   'gemini-flash-latest'
 ];
 
-const DEFAULT_GEMINI_API_KEY = 'AQ.Ab8RN6IvhwR1-AIhqy0Q5XFy8kxMjWSSgYOifTYj9qvBDMSLHw';
+const DEFAULT_GEMINI_API_KEY = '';
 
 function getAiClient(userApiKey?: string): GoogleGenAI | null {
   const apiKey = (userApiKey && userApiKey.trim()) || process.env.GEMINI_API_KEY || process.env.API_KEY || DEFAULT_GEMINI_API_KEY;
@@ -519,7 +519,7 @@ async function resolveDirectPinterestUrl(urlOrUser: string): Promise<LivePinItem
   return null;
 }
 
-const DEFAULT_ONE_API_TOKEN = '149336:6aaa7eeba75d4';
+const DEFAULT_ONE_API_TOKEN = '';
 
 async function executePinterestSearch(query: string, offset = 0, userToken?: string) {
   const token = (userToken && userToken.trim()) || process.env.ONE_API_TOKEN || process.env.ONE_API_KEY || DEFAULT_ONE_API_TOKEN;
@@ -591,7 +591,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: '50mb' }));
+  // Keep image payloads practical while avoiding an unbounded JSON body.
+  app.use(express.json({ limit: '20mb' }));
 
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
@@ -652,70 +653,56 @@ async function startServer() {
   app.post('/api/fetch-image', async (req, res) => {
     try {
       const { url } = req.body;
-      if (!url) {
-        return res.status(400).json({ error: 'URL parameter is required' });
+      if (typeof url !== 'string' || !url.trim()) return res.status(400).json({ error: 'URL parameter is required' });
+      let target: URL;
+      try { target = new URL(url.trim()); } catch { return res.status(400).json({ error: 'Invalid URL' }); }
+
+      // This endpoint performs server-side fetching: allowlist destinations to prevent SSRF.
+      const hostname = target.hostname.toLowerCase();
+      const allowedHosts = ['pinterest.com', 'www.pinterest.com', 'pin.it', 'i.pinimg.com', 'images.unsplash.com'];
+      const isAllowedHost = allowedHosts.some(host => hostname === host || hostname.endsWith('.' + host));
+      if (target.protocol !== 'https:' || !isAllowedHost) {
+        return res.status(400).json({ error: 'Image host is not allowed' });
       }
 
       let response: Response | null = null;
-
-      // 1. Direct fetch with browser headers & appropriate Referer
+      const isPinterest = hostname.includes('pinterest.com') || hostname === 'pin.it' || hostname.endsWith('.pinimg.com');
       try {
-        const isPinterest = url.includes('pinimg.com') || url.includes('pinterest.com');
-        response = await fetch(url, {
+        response = await fetch(target.toString(), {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
             'Referer': isPinterest ? 'https://www.pinterest.com/' : 'https://www.google.com/',
-            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-            'sec-fetch-dest': 'image',
-            'sec-fetch-mode': 'no-cors',
-            'sec-fetch-site': 'cross-site'
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
           },
           signal: AbortSignal.timeout(8000)
         });
-      } catch {
-        // network or timeout error handled below
-      }
+      } catch {}
 
-      // 2. Fallback to image mirror / proxy if forbidden or unreachable
       if (!response || !response.ok) {
         try {
-          const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(url)}&default=${encodeURIComponent(url)}`;
+          const proxyUrl = 'https://wsrv.nl/?url=' + encodeURIComponent(target.toString()) + '&default=' + encodeURIComponent(target.toString());
           const proxyRes = await fetch(proxyUrl, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-              'Accept': 'image/*,*/*'
-            },
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'Accept': 'image/*,*/*' },
             signal: AbortSignal.timeout(8000)
           });
-          if (proxyRes.ok) {
-            response = proxyRes;
-          }
-        } catch {
-          // proxy failed
-        }
+          if (proxyRes.ok) response = proxyRes;
+        } catch {}
       }
 
       if (!response || !response.ok) {
-        console.warn(`[fetch-image] Image inaccessible (${response?.status || 'network error'}): ${url}`);
-        return res.status(200).json({ 
-          base64: null, 
-          mimeType: null, 
-          error: `Image unavailable (${response?.status || 'Fetch failed'})` 
-        });
+        return res.status(200).json({ base64: null, mimeType: null, error: 'Image unavailable (' + (response?.status || 'Fetch failed') + ')' });
       }
 
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const base64 = buffer.toString('base64');
-      const mimeType = response.headers.get('content-type') || 'image/jpeg';
-      
-      res.json({ base64, mimeType });
+      const contentType = (response.headers.get('content-type') || '').toLowerCase();
+      if (!contentType.startsWith('image/')) return res.status(415).json({ base64: null, mimeType: null, error: 'Remote resource is not an image' });
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      res.json({ base64: buffer.toString('base64'), mimeType: contentType.split(';', 1)[0] || 'image/jpeg' });
     } catch (error: any) {
       console.warn('Fetch Image Warning:', error?.message || error);
       res.status(200).json({ base64: null, mimeType: null, error: error?.message || 'Failed to fetch image' });
     }
   });
-
   app.post('/api/execute-engine', async (req, res) => {
     try {
       const { engineVersion, stylePart, facePart, feedbackPart, customGeminiApiKey } = req.body;
