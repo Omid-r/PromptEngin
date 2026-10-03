@@ -727,6 +727,18 @@ async function startServer() {
           const clonePrompt = `Write a prompt to clone this EXACT image. Rules: 1. EXPLICIT ASPECT RATIO. 2. ANTI-HALLUCINATION. Output ONLY comma-separated prompt ending with:\n${IDENTITY_LOCK}\n${BASE_NEGATIVE}`;
           const res1 = await generateWithRetry(ai, { model: MODEL_NAME, contents: [clonePrompt, stylePart] });
           output = res1?.text?.trim() || '';
+        } else if (engineVersion === '6.0') {
+          const persona = `You are an elite fashion and editorial photographer performing visual reverse-engineering.
+Do not invent hidden facts. Describe only evidence visible in the reference, then convert it into a production-ready prompt.
+Prioritize composition, pose, wardrobe, lighting direction/quality, lens perspective, depth of field, color science and realistic optical imperfections.
+Preserve identity and framing without claiming a guaranteed similarity percentage.
+End with the required identity and negative anchors.`;
+          const res1 = await generateWithRetry(ai, {
+            model: MODEL_NAME,
+            contents: [persona, stylePart, `Reverse-engineer this image as a senior fashion photographer. Return one polished prompt plus a concise Persian context line.`],
+            config: { maxOutputTokens: 1200, temperature: 0.15 }
+          });
+          output = res1?.text?.trim() || '';
         } else if (engineVersion === '7.0') {
           const step1Prompt = `Reverse-engineer this image into a strict 5-paragraph natural language prompt. DO NOT use tag lists.
           Paragraph 1: "${IDENTITY_LOCK}"
