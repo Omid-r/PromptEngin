@@ -231,7 +231,7 @@ const DEFAULT_GOOGLE_GEMINI_API_KEY = '';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'search_moderation' | 'selected_candidates' | 'prompt_engine_gallery' | 'model_tags' | 'showcase' | 'diagnostics'>('search_moderation');
-  const [statusText, setStatusText] = useState('سیستم آماده (فیلتر هوشمند: پرامپت‌کارت واقعی پرتره، رد کامل اینفوگرافیک و متن)');
+  const [statusText, setStatusText] = useState('سیستم آماده (فیلتر هوشمند: پرتره خام یا پرامپت‌کارت؛ رد اینفوگرافیک و محتوای نامرتبط)');
   const abortControllerRef = useRef<boolean>(false);
   const isProducerDoneRef = useRef<boolean>(false);
   
@@ -902,7 +902,7 @@ export default function App() {
   };
 
   // =====================================================================
-  // موتور ۱: صف چرخشی FIFO همراه با فیلتر هوشمند تکراری‌ها
+  // موتور ۱: صف چرخشی FIFO + فیلتر پرتره/پرامپت + حذف تکراری‌ها
   // =====================================================================
   const runProducerEngine1 = async (initialItems: SmartGalleryItem[]) => {
     setEngine1Active(true);
