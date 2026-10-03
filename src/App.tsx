@@ -682,8 +682,8 @@ export default function App() {
       if (!res.ok) return false;
       const data = await res.json();
       const text = (data.prompt || "").trim().toUpperCase();
-      // Only accept if model strictly responded YES and not NO
-      return text.startsWith('YES') || (text.includes('YES') && !text.includes('NO'));
+      // A = raw portrait, B = portrait with prompt card. Both continue to deep analysis.
+      return text === 'A' || text === 'B' || text.startsWith('A\n') || text.startsWith('B\n');
     } catch {
       return false;
     }
