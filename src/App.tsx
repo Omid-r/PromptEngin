@@ -745,8 +745,15 @@ export default function App() {
           });
           const compData = await compRes.json();
           if (compData.completedPrompt && compData.completedPrompt.length >= prompt.length) {
-            prompt = cleanPromptText(compData.completedPrompt);
-            isTruncated = false;
+            const candidate = cleanPromptText(compData.completedPrompt);
+            const normalize = (v: string) => v.toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').trim();
+            const originalPrefix = normalize(prompt).slice(0, 120);
+            const candidatePrefix = normalize(candidate).slice(0, 240);
+            // Never replace OCR with an unrelated web match merely because it is longer.
+            if (originalPrefix && candidatePrefix.includes(originalPrefix)) {
+              prompt = candidate;
+              isTruncated = false;
+            }
           }
         } catch {}
       }
@@ -766,7 +773,7 @@ export default function App() {
         isTruncated: false,
         supervisorVerdict: {
           source: 'REVERSE_ENGINEERING',
-          engineName: 'موتور اختصاصی ۸.۰ (طراحی بلوکی نور و آناتومی با ۹۵٪ شباهت بصری)',
+          engineName: 'موتور اختصاصی ۸.۰ (بلوک‌بندی فیزیکی، نوری و آناتومی)',
           pitch: 'این اثر با بهره‌گیری از فیزیک واقع‌گرایانه لنز ۸۵ میلی‌متری و بازتاب ارگانیک نور در چشم‌ها، حس یک شات عکاسی زنده مجله ووگ را تداعی می‌کند؛ فرمولی بی‌نظیر که اجرای آن در میجرنی خروجی چشمگیری به همراه خواهد داشت.',
           lightingStyle: 'نورپردازی پرتره سینمایی با نور ملایم جهت‌دار',
           cameraOptics: 'لنز پرایم ۸۵ میلی‌متری با دیافراگم f/1.4',
