@@ -8,51 +8,28 @@ import { Terminal, Copy, Loader2, Sparkles, Compass, Search, CheckCircle2, Tag, 
 import { SirenyStore } from './components/SirenyStore';
 
 // 🔴 موتور اول: فیلتر متوالی فوق‌سریع و سخت‌گیرانه (رد اینفوگرافیک، متن زیاد و کارتون - پذیرش فقط پرامپت‌کارت واقعی پرتره) 🔴
-const FAST_FILTER_INSTRUCTION = `STRICT BINARY CLASSIFICATION: VALID AI PORTRAIT PROMPT CARD vs REJECT
+const FAST_FILTER_INSTRUCTION = `STRICT BINARY CLASSIFICATION: ACCEPT PORTRAIT SOURCE OR PROMPT CARD
 
-You are a strict quality gatekeeper for an AI portrait prompt gallery. Evaluate if this image qualifies.
+Classify exactly one state:
+A = realistic human portrait / editorial photo, no prompt card required
+B = realistic human portrait + visible AI prompt/card
+C = reject
 
-MANDATORY APPROVAL REQUIREMENTS (ALL must be strictly true to pass):
-1. REAL PHOTOGRAPHIC HUMAN: The image MUST feature an authentic photograph or photorealistic render of a REAL HUMAN BEING (real human face, portrait, fashion model, or realistic person with real skin texture and facial features).
-2. VISUAL PHOTO IS THE DOMINANT SUBJECT: The photographic portrait of the human must be the primary, prominent visual subject occupying the major visual space of the image.
-3. PROMPT TEXT OVERLAY / CARD: There is an AI prompt text, prompt card, text box, or prompt overlay associated with the portrait image (whether short, long, single-column, or multi-column).
-
-STRICT REJECTION CRITERIA (Respond "NO" immediately if ANY apply):
-1. TEXT-DOMINANT / ALL-TEXT / INFOGRAPHIC (CRITICAL REJECTION):
-   - REJECT immediately if the image is mostly text, a checklist, a tips or guide poster (e.g. "10 Photography Prompts", "5 Posing Tips", advice for family sessions).
-   - REJECT if the image is a cheatsheet, document, slide, quote card, blog banner, or graphic card covered in text paragraphs or numbered lists.
-   - REJECT any image where text or graphic layout occupies more visual weight than an actual human photograph.
-2. NO VECTOR / CLIPART / ICONS / STICK FIGURES:
-   - REJECT if the only humans are cartoon drawings, vector silhouettes, clipart, line art, icons, or stick figures.
-3. NO OBJECTS / ANIMALS / CARS / LANDSCAPES / TEXT ONLY.
-
-DECISION:
-- If this is a real photographic human portrait card showcasing a real model with its prompt: Respond ONLY with "YES".
-- If this is an infographic, text-heavy list, tips card, cartoon, or has no real photographic human: Respond ONLY with "NO".
-
-Answer with exactly one word: YES or NO.`;
+Accept A or B. Reject text-only posters, infographics, tips/cheatsheets, cartoons, illustrations, logos, landscapes, animals, objects, or images where a human portrait is not dominant.
+A prompt card is NOT required: raw portraits must pass because they are reverse-engineered later.
+Do not infer an unseen prompt. Answer with exactly one token: A, B, or C.`
 
 // 🔴 موتور دوم: استخراج دقیق و کلمه‌به‌کلمه متن پرامپت از روی پوستر (Pure Verbatim OCR) 🔴
-const DEEP_PROMPT_INSTRUCTION = `TASK: HIGH-PRECISION VERBATIM OCR (PROMPT TEXT EXTRACTION FROM IMAGE)
+const DEEP_PROMPT_INSTRUCTION = `TASK: CLASSIFY THEN EXTRACT
 
-You are a precision OCR engine. Read and extract the EXACT, VERBATIM AI prompt written or printed on this image card (inside the text box, overlay card, prompt container, or caption).
+If PROMPT_CARD: transcribe ONLY prompt text actually visible. Preserve spelling, punctuation, parameters and flags exactly. Never invent missing text. Mark unreadable regions as [UNREADABLE].
+If RAW_PORTRAIT: do not pretend OCR exists; reverse-engineer only visible evidence (subject, pose, composition, camera perspective, lighting, wardrobe, environment and technical characteristics).
+If REJECT: return no prompt.
 
-MANDATORY RULES:
-1. DO NOT GENERATE, SUMMARIZE, OR MAKE UP A NEW PROMPT.
-2. DO NOT DESCRIBE THE PERSON OR PICTURE IN YOUR OWN WORDS.
-3. Transcribe character-for-character the exact text printed on the image card (including all columns and headers like ROLE, IDENTITY, WARDROBE, LIGHTING, etc.).
-4. Keep all parameters, aspect ratios, and flags (such as --ar 16:9, --v 6.0, --style raw, --chaos, --s) exactly as printed on the image.
-5. If the card begins with labels like "Prompt:", "PROMPT:", "Midjourney Prompt:", or quotes, remove the label prefix and return the exact prompt text.
-6. If the image has NO printed text at all, only then provide a short direct prompt describing the visual scene.
-
-Format your response strictly as:
-[PROMPT]
-<the exact verbatim prompt transcribed from the image card>
-[/PROMPT]
-
-[CONTEXT]
-<one short Persian sentence describing lighting, angle, and studio structure>
-[/CONTEXT]`;
+Return exactly:
+[PROMPT_SOURCE] PROMPT_CARD | RAW_PORTRAIT | REJECT [/PROMPT_SOURCE]
+[PROMPT] ... [/PROMPT]
+[CONTEXT] one concise Persian sentence [/CONTEXT]`
 
 export function cleanPromptText(input: string | null | undefined): string {
   if (!input) return '';
@@ -2451,12 +2428,15 @@ export default function App() {
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
                     {[
-                      { v: '8.0', label: '📐 نسخه ۸.۰: بلوک‌بندی ۹۵٪', desc: 'نور، اپتیک و آناتومی اولترا' },
-                      { v: '9.0', label: '⚡ نسخه ۹.۰: آرتاایروس سینمایی', desc: 'تک پاراگراف نوری' },
-                      { v: '7.0', label: '🎭 نسخه ۷.۰: توصیف ۵ پاراگرافی', desc: 'FACS و زاویه لنز' },
-                      { v: '4.0', label: '🎯 نسخه ۴.۰: کلون ضد هذیان', desc: 'کپی دقیق نور و قاب' },
-                      { v: '2.0', label: '🧊 نسخه ۲.۰: ساختار کامپوننت', desc: 'دوربین، پوز، محیط' },
-                      { v: '1.0', label: '📸 نسخه ۱.۰: معکوس توصیفی', desc: 'زاویه، نور، سوژه' }
+                      { v: '8.0', label: '📐 نسخه ۸.۰: بلوک فیزیکی', desc: 'نور، اپتیک و آناتومی' },
+                      { v: '9.0', label: '⚡ نسخه ۹.۰: آرتاایروس', desc: 'پاراگراف سینمایی' },
+                      { v: '7.0', label: '🎭 نسخه ۷.۰: ۵ پاراگراف', desc: 'FACS و زاویه لنز' },
+                      { v: '6.0', label: '🎬 نسخه ۶.۰: فشن پرسنای حرفه‌ای', desc: 'نگاه عکاس فشن' },
+                      { v: '5.0', label: '🧬 نسخه ۵.۰: Kinematic', desc: 'پوزیشن و بردار نور' },
+                      { v: '4.0', label: '🎯 نسخه ۴.۰: ضد هذیان', desc: 'کپی محافظه‌کارانه قاب' },
+                      { v: '3.0', label: '🔁 نسخه ۳.۰: Critique Loop', desc: 'بازنویسی با بازخورد' },
+                      { v: '2.0', label: '🧊 نسخه ۲.۰: Component', desc: 'دوربین، پوز، محیط' },
+                      { v: '1.0', label: '📸 نسخه ۱.۰: Descriptive', desc: 'زاویه، نور، سوژه' }
                     ].map((eng) => (
                       <button
                         key={eng.v}
