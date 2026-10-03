@@ -912,20 +912,20 @@ You are the Executive Supervisor and Creative Director of an elite AI Studio pro
 
 STEP 1: INSPECTION & AUDIT
 - Check if this image has an actual printed AI prompt card/box/text overlay.
-- If YES:
+- If YES and there is clearly visible generation text:
   * PROMPT_SOURCE: OCR
-  * ENGINE_NAME: استخراج مستقیم وفادارانه OCR از کارت پوستر
-  * Extract all prompt text verbatim with zero omission or summary.
-- If NO (the image is a raw photograph, or only has a few short/meaningless words or simple titles like "posing tips", "cute girl", "autumn vibes" which is NOT an AI prompt):
+  * ENGINE_NAME: استخراج مستقیم از متن قابل‌خواندن کارت
+  * Extract only text that is actually visible. Never invent missing characters; use [UNREADABLE] when necessary.
+- If NO and the image is a raw portrait:
   * PROMPT_SOURCE: REVERSE_ENGINEERING
-  * ENGINE_NAME: موتور اختصاصی ۸.۰ (طراحی بلوکی نور و آناتومی با ۹۵٪ شباهت بصری)
-  * EXECUTE ENGINE 8.0 ULTRA PROTOCOL (95% Visual Similarity Architecture):
+  * ENGINE_NAME: موتور اختصاصی ۸.۰ (بلوک‌بندی فیزیکی، نوری و آناتومی)
+  * EXECUTE ENGINE 8.0 ULTRA PROTOCOL:
     Synthesize an ultra-detailed, highly structured Midjourney prompt using ALL-CAPS LABELED BLOCKS:
     1. [SUBJECT & ANATOMICAL IDENTITY]: Describe the exact face, bone structure, eye shape, nose bridge, lip contours, skin undertones, hair texture/styling, and facial geometry. Include: "${IDENTITY_LOCK}"
     2. [EXPRESSION & MICRO-GAZE]: Exact facial action units (FACS), eyelid tension, lip parting, emotional nuance, gaze angle, and corneal specular catchlights.
     3. [WARDROBE & TEXTILES]: Exact clothing items, fabrics, weave textures, collar construction, and natural drape folds.
     4. [PHOTOMETRIC LIGHTING SETUP]: Primary key light angle (e.g. 45-degree Rembrandt/Butterfly lighting with large modifier), fill light ratio (3:1), rim/hair light separation, ambient shadow penumbra, and specular highlight placement on cheekbones/skin.
-    5. [OPTICS & CAMERA SCIENCE]: Camera focal length (85mm f/1.4 portrait prime), precise depth of field, creamy circular bokeh, framing, sensor color science (Kodak Portra 400 tonal gradation, authentic fine film grain).
+    5. [OPTICS & CAMERA SCIENCE]: Infer only what the image supports: approximate focal-length class, perspective, depth of field, bokeh shape, framing, sensor/film characteristics and visible optical artifacts. Do not assume 85mm, f/1.4, or a specific film stock unless the image provides evidence.
     6. [ENVIRONMENT & BACKGROUND]: Background color tones, depth separation, atmospheric lighting, and architectural or studio elements.
     7. [TECHNICAL ANCHORS]: "${QUALITY_ANCHOR}"
     8. [NEGATIVE EXCLUSIONS]: "${BASE_NEGATIVE}"
@@ -935,7 +935,7 @@ Write a captivating, deeply persuasive and authoritative review in Persian that 
 Analyze:
 1. ساختار نورپردازی و کنتراست (نور ملایم جهت‌دار، ریم‌لایت، سایه‌روشن طبیعی).
 2. اپتیک و ترکیب‌بندی دوربین (لنز ۸۵ میلی‌متری، عمق میدان، پرسپکتیو چشم).
-3. ترغیب اختصاصی (چرا باید این پرامپت را تست کنید؟ توضیح دهید چرا خروجی این فرمول از کارهای متداول هوش مصنوعی فراتر و چشم‌نواز است).
+3. توضیح کاربردی درباره اینکه کدام بخش‌های مشاهده‌شده یا بازسازی‌شده برای بازتولید سبک مفید هستند؛ از ادعای برتری تضمینی یا شباهت درصدی خودداری کنید.
 
 STEP 3: CLICKBAIT CLEANUP
 Never include "FULL PROMPT? VISIT WEBSITE ↓", telegram ads, or URL references.
@@ -970,7 +970,7 @@ FORMAT YOUR RESPONSE EXACTLY AS:
 [/CAMERA_OPTICS]
 
 [QUALITY_SCORE]
-<e.g. ۹.۸ / ۱۰>
+<e.g. 0.87 evidence confidence; do not claim visual similarity percentage>
 [/QUALITY_SCORE]`;
 
       if (ai) {
@@ -982,17 +982,17 @@ FORMAT YOUR RESPONSE EXACTLY AS:
         const rawText = resPrompt?.text?.trim() || '';
         if (rawText) {
           // Parse structured tags
-          let source = 'OCR';
+          let source = 'REVERSE_ENGINEERING';
           if (rawText.includes('[PROMPT_SOURCE]')) {
             const srcPart = rawText.split('[PROMPT_SOURCE]')[1]?.split('[/PROMPT_SOURCE]')[0]?.trim();
-            if (srcPart === 'REVERSE_ENGINEERING' || srcPart === 'NO_OCR_RAW_IMAGE') {
+            if (srcPart === 'OCR' || srcPart === 'PROMPT_CARD') { source = 'OCR'; } else if (srcPart === 'REVERSE_ENGINEERING' || srcPart === 'RAW_PORTRAIT' || srcPart === 'NO_OCR_RAW_IMAGE') {
               source = 'REVERSE_ENGINEERING';
             }
           }
 
           let engineName = source === 'OCR' 
             ? 'استخراج مستقیم وفادارانه OCR از کارت پوستر' 
-            : 'موتور اختصاصی ۸.۰ (طراحی بلوکی نور و آناتومی با ۹۵٪ شباهت بصری)';
+            : 'موتور اختصاصی ۸.۰ (بلوک‌بندی فیزیکی، نوری و آناتومی)';
 
           if (rawText.includes('[ENGINE_NAME]')) {
             const engPart = rawText.split('[ENGINE_NAME]')[1]?.split('[/ENGINE_NAME]')[0]?.trim();
