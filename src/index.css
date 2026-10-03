@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+:root {
+  --bg-body: #000104;
+  --paragraph-color: #afafaf;
+}
+
+body {
+  background-color: #000104;
+  color: #afafaf;
+  font-family: 'Plus Jakarta Sans', 'Vazirmatn', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+}
+
+.font-display {
+  font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
+}
