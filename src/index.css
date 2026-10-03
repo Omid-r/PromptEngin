@@ -15,3 +15,8 @@ body {
 .font-display {
   font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
 }
+
+html { scroll-behavior: smooth; }
+* { box-sizing: border-box; }
+button, a, input { -webkit-tap-highlight-color: transparent; }
+::selection { background: #facc15; color: #000; }
