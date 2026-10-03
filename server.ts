@@ -900,8 +900,10 @@ Answer with exactly one word: YES or NO.`;
             });
           }
         }
+        // Fail open to the raw-portrait path only when the classifier is unavailable.
+        // Deep analysis remains the second gate and can reject non-portrait content.
         return res.json({
-          prompt: 'YES',
+          prompt: 'A',
           contextDesc: ''
         });
       }
