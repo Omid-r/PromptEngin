@@ -249,8 +249,8 @@ function isVisualDuplicate(hash: string, knownHashes: string[], threshold = 6): 
   return false;
 }
 
-const DEFAULT_PINTEREST_ONE_API_TOKEN = '149336:6aaa7eeba75d4';
-const DEFAULT_GOOGLE_GEMINI_API_KEY = 'AQ.Ab8RN6IvhwR1-AIhqy0Q5XFy8kxMjWSSgYOifTYj9qvBDMSLHw';
+const DEFAULT_PINTEREST_ONE_API_TOKEN = '';
+const DEFAULT_GOOGLE_GEMINI_API_KEY = '';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'search_moderation' | 'selected_candidates' | 'prompt_engine_gallery' | 'model_tags' | 'showcase' | 'diagnostics'>('search_moderation');
