@@ -214,7 +214,7 @@ export function SirenyStore({ approvedItems, onOpenPipeline, onTestInGemini }: S
                   <div className="p-4">
                     <div className="text-[10px] text-yellow-400 font-black uppercase tracking-wider">{p.categoryLabel}</div>
                     <h3 className="font-bold text-sm mt-1 line-clamp-2">{p.title}</h3>
-                    <div className="flex items-center justify-between mt-3 text-xs"><span className="text-neutral-500">★ {p.rating}</span><span className="font-black">{p.priceUsd.toFixed(2)} credits*</span></div>
+                    <div className="flex items-center justify-between mt-3 text-xs"><span className="text-neutral-500">★ {p.rating}</span><span className="font-black">${p.priceUsd.toFixed(2)}</span></div>
                   </div>
                 </button>
               </article>
